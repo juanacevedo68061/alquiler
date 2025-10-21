@@ -1,6 +1,6 @@
 # Sistema de alquiler de autos
 
-## 1. Reconstruir el proyecto Android vacío
+## 1. Reconstruir el proyecto Android
 
 ```bash
 flutter create --platforms=android --empty .
