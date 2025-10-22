@@ -74,7 +74,11 @@ class _ReservasScreenState extends State<ReservasScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Gestión de Reservas')),
+      appBar: AppBar(
+        title: const Text('Gestión de Reservas'),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+      ),
       body: reservasVisibles.isEmpty
           ? const Center(child: Text('No hay reservas registradas'))
           : ListView.builder(

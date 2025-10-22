@@ -88,7 +88,11 @@ class _ClientesScreenState extends State<ClientesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Administración de Clientes')),
+      appBar: AppBar(
+        title: const Text('Administración de Clientes'),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+      ),
       body: Column(
         children: [
           ClientesFilter(key: filtroKey, onFilterChanged: actualizarFiltro),

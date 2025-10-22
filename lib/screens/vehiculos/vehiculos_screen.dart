@@ -97,7 +97,11 @@ class _VehiculosScreenState extends State<VehiculosScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Administración de Vehículos')),
+      appBar: AppBar(
+        title: const Text('Administración de Vehículos'),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+      ),
       body: Column(
         children: [
           VehiculosFilter(key: filtroKey, onFilterChanged: actualizarFiltro),

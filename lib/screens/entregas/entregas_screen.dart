@@ -63,7 +63,11 @@ class _EntregasScreenState extends State<EntregasScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Gestión de Entregas')),
+      appBar: AppBar(
+        title: const Text('Gestión de Entregas'),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+      ),
       body: entregasVisibles.isEmpty
           ? const Center(child: Text('No hay entregas registradas'))
           : ListView.builder(
