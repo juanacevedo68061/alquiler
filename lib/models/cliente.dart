@@ -3,12 +3,14 @@ class Cliente {
   String nombre;
   String apellido;
   String numeroDocumento;
+  bool eliminado;
 
   Cliente({
     required this.id,
     required this.nombre,
     required this.apellido,
     required this.numeroDocumento,
+    this.eliminado = false,
   });
 
   // Método para mostrar el nombre completo en listas

@@ -4,6 +4,7 @@ class Vehiculo {
   String modelo;
   int anio;
   bool disponible;
+  bool eliminado;
 
   Vehiculo({
     required this.id,
@@ -11,6 +12,7 @@ class Vehiculo {
     required this.modelo,
     required this.anio,
     this.disponible = true,
+    this.eliminado = false,
   });
 
   // Método opcional para mostrarlo fácilmente en listas

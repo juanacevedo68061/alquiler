@@ -37,7 +37,7 @@ class _EntregasScreenState extends State<EntregasScreen> {
         idVehiculo: -1,
         fechaInicio: DateTime.now(),
         fechaFin: DateTime.now(),
-        entregado: false,
+        activo: false,
       ),
     );
 
@@ -69,7 +69,32 @@ class _EntregasScreenState extends State<EntregasScreen> {
         foregroundColor: Colors.white,
       ),
       body: entregasVisibles.isEmpty
-          ? const Center(child: Text('No hay entregas registradas'))
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.inventory_2, size: 80, color: Colors.grey[400]),
+                  const SizedBox(height: 20),
+                  Text(
+                    'No hay entregas registradas',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: Text(
+                      'No se han registrado entregas en el sistema. Puede registrar una nueva entrega usando el botón +.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                    ),
+                  ),
+                ],
+              ),
+            )
           : ListView.builder(
               itemCount: entregasVisibles.length,
               itemBuilder: (context, index) {

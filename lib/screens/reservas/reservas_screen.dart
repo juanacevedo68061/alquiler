@@ -37,8 +37,15 @@ class _ReservasScreenState extends State<ReservasScreen> {
         nombre: 'No encontrado',
         apellido: '',
         numeroDocumento: '',
+        eliminado: true,
       ),
     );
+
+    // Si el cliente está eliminado, indicarlo
+    if (cliente.eliminado) {
+      return '${cliente.nombreCompleto} (Eliminado)';
+    }
+
     return cliente.nombreCompleto;
   }
 
@@ -52,9 +59,46 @@ class _ReservasScreenState extends State<ReservasScreen> {
         modelo: '',
         anio: 0,
         disponible: true,
+        eliminado: true,
       ),
     );
+
+    // Si el vehículo está eliminado, indicarlo
+    if (vehiculo.eliminado) {
+      return '${vehiculo.marca} ${vehiculo.modelo} (Eliminado)';
+    }
+
     return '${vehiculo.marca} ${vehiculo.modelo}';
+  }
+
+  // Método para obtener el motivo de inactividad
+  String _obtenerMotivoInactividad(Reserva reserva) {
+    final cliente = DataStore.clientes.firstWhere(
+      (c) => c.id == reserva.idCliente,
+      orElse: () => Cliente(
+        id: -1,
+        nombre: '',
+        apellido: '',
+        numeroDocumento: '',
+        eliminado: true,
+      ),
+    );
+
+    final vehiculo = DataStore.vehiculos.firstWhere(
+      (v) => v.id == reserva.idVehiculo,
+      orElse: () => Vehiculo(
+        id: -1,
+        marca: '',
+        modelo: '',
+        anio: 0,
+        disponible: true,
+        eliminado: true,
+      ),
+    );
+
+    if (cliente.eliminado) return 'Cliente eliminado';
+    if (vehiculo.eliminado) return 'Vehículo eliminado';
+    return 'Entrega registrada';
   }
 
   String _formatearFecha(DateTime fecha) {
@@ -63,12 +107,12 @@ class _ReservasScreenState extends State<ReservasScreen> {
 
   // Método para obtener el estado de la reserva
   String _obtenerEstadoReserva(Reserva reserva) {
-    return reserva.entregado ? 'Inactivo' : 'Activo';
+    return reserva.activo ? 'Activo' : 'Inactivo';
   }
 
   // Método para obtener el color del estado
   Color _obtenerColorEstado(Reserva reserva) {
-    return reserva.entregado ? Colors.orange : Colors.green;
+    return reserva.activo ? Colors.green : Colors.orange;
   }
 
   @override
@@ -80,11 +124,37 @@ class _ReservasScreenState extends State<ReservasScreen> {
         foregroundColor: Colors.white,
       ),
       body: reservasVisibles.isEmpty
-          ? const Center(child: Text('No hay reservas registradas'))
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.calendar_today, size: 80, color: Colors.grey[400]),
+                  const SizedBox(height: 20),
+                  Text(
+                    'No hay reservas registradas',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: Text(
+                      'No se han encontrado reservas en el sistema. Puede crear una nueva reserva usando el botón +.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                    ),
+                  ),
+                ],
+              ),
+            )
           : ListView.builder(
               itemCount: reservasVisibles.length,
               itemBuilder: (context, index) {
                 final r = reservasVisibles[index];
+
                 return Card(
                   margin: const EdgeInsets.all(8),
                   child: ListTile(
@@ -120,6 +190,15 @@ class _ReservasScreenState extends State<ReservasScreen> {
                         Text(
                           '${_formatearFecha(r.fechaInicio)} - ${_formatearFecha(r.fechaFin)}',
                         ),
+                        if (!r.activo)
+                          Text(
+                            'Motivo: ${_obtenerMotivoInactividad(r)}',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
                       ],
                     ),
                   ),

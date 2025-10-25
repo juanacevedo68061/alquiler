@@ -13,16 +13,19 @@ class ClientesScreen extends StatefulWidget {
 
 class _ClientesScreenState extends State<ClientesScreen> {
   List<Cliente> clientesVisibles = [];
-
-  // Clave global para acceder al estado de ClientesFilter
   final GlobalKey<ClientesFilterState> filtroKey =
       GlobalKey<ClientesFilterState>();
 
   @override
   void initState() {
     super.initState();
-    // Inicializar con todos los clientes al cargar
-    clientesVisibles = List.from(DataStore.clientes);
+    _cargarClientesVisibles();
+  }
+
+  void _cargarClientesVisibles() {
+    setState(() {
+      clientesVisibles = DataStore.clientes.where((c) => !c.eliminado).toList();
+    });
   }
 
   void actualizarFiltro(List<Cliente> filtrados) {
@@ -31,65 +34,191 @@ class _ClientesScreenState extends State<ClientesScreen> {
     });
   }
 
-  void _recargarFiltro() {
+  void _recargarTodo() {
+    // Recargar el filter para limpiar filtros y opciones
     filtroKey.currentState?.recargarOpciones();
     // También recargar la lista visible
-    setState(() {
-      clientesVisibles = List.from(DataStore.clientes);
-    });
+    _cargarClientesVisibles();
   }
 
-  void agregarCliente(Cliente c) {
-    setState(() {
-      DataStore.clientes.add(c);
-      clientesVisibles = List.from(DataStore.clientes);
-    });
-    _recargarFiltro();
+  void _agregarCliente(Cliente c) {
+    DataStore.clientes.add(c);
+    _recargarTodo();
   }
 
-  void editarCliente(Cliente c) {
-    // Buscar el índice en la lista original por ID
-    final indexOriginal = DataStore.clientes.indexWhere(
+  void _editarCliente(Cliente c) {
+    final index = DataStore.clientes.indexWhere(
       (cliente) => cliente.id == c.id,
     );
-    if (indexOriginal != -1) {
-      setState(() {
-        DataStore.clientes[indexOriginal] = c;
-        // Actualizar también en la lista visible
-        final indexVisible = clientesVisibles.indexWhere(
-          (cliente) => cliente.id == c.id,
-        );
-        if (indexVisible != -1) {
-          clientesVisibles[indexVisible] = c;
-        } else {
-          // Si no está en la lista visible (por filtros), recargar todo
-          clientesVisibles = List.from(DataStore.clientes);
-        }
-      });
+    if (index != -1) {
+      DataStore.clientes[index] = c;
+      _recargarTodo();
     }
-    _recargarFiltro();
   }
 
-  void eliminarCliente(Cliente cliente) {
-    // Buscar el índice en la lista original por ID
-    final indexOriginal = DataStore.clientes.indexWhere(
-      (c) => c.id == cliente.id,
+  void _eliminarCliente(Cliente cliente) {
+    final tieneReservasActivas = _tieneReservasActivas(cliente);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            tieneReservasActivas
+                ? 'Eliminar Cliente con Reserva Activa'
+                : 'Eliminar Cliente',
+          ),
+          content: Text(
+            tieneReservasActivas
+                ? 'El cliente ${cliente.nombreCompleto} tiene una reserva activa. ¿Esta seguro de que desea eliminarlo? La reserva activa sera cancelada automaticamente.'
+                : '¿Esta seguro de que desea eliminar a ${cliente.nombreCompleto}?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                _confirmarEliminacion(cliente, tieneReservasActivas);
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                'Eliminar',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
     );
-    if (indexOriginal != -1) {
+  }
+
+  void _confirmarEliminacion(Cliente cliente, bool tieneReservasActivas) {
+    final index = DataStore.clientes.indexWhere((c) => c.id == cliente.id);
+    if (index != -1) {
       setState(() {
-        DataStore.clientes.removeAt(indexOriginal);
-        // Remover también de la lista visible
-        clientesVisibles.removeWhere((c) => c.id == cliente.id);
+        DataStore.clientes[index].eliminado = true;
+        if (tieneReservasActivas) {
+          _cancelarReservasActivas(cliente.id);
+        }
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Cliente ${cliente.nombreCompleto} eliminado')),
+      );
     }
-    _recargarFiltro();
+    _recargarTodo();
+  }
+
+  bool _tieneReservasActivas(Cliente cliente) {
+    return DataStore.reservas.any(
+      (reserva) => reserva.idCliente == cliente.id && reserva.activo,
+    );
+  }
+
+  void _cancelarReservasActivas(int idCliente) {
+    for (final reserva in DataStore.reservas) {
+      if (reserva.idCliente == idCliente && reserva.activo) {
+        reserva.activo = false;
+      }
+    }
+  }
+
+  // Detectar filtros activos usando el filter
+  bool get _hayFiltrosActivos {
+    final state = filtroKey.currentState;
+    return state != null && state.hayFiltrosActivos;
+  }
+
+  Widget _buildMensajeVacio() {
+    final mensaje = _hayFiltrosActivos
+        ? 'No hay clientes que coincidan con los filtros'
+        : 'No hay clientes registrados';
+
+    final descripcion = _hayFiltrosActivos
+        ? 'No se encontraron clientes con los criterios de busqueda seleccionados.'
+        : 'No se han encontrado clientes en el sistema. Puede registrar un nuevo cliente usando el boton +.';
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.people, size: 80, color: Colors.grey[400]),
+          const SizedBox(height: 20),
+          Text(
+            mensaje,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              descripcion,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            ),
+          ),
+          // ELIMINADO: Botón "Limpiar filtros" - ya está en el filter
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemCliente(Cliente c) {
+    final tieneReservasActivas = _tieneReservasActivas(c);
+
+    return Card(
+      margin: const EdgeInsets.all(8),
+      child: ListTile(
+        title: Text(c.nombreCompleto),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Documento: ${c.numeroDocumento}'),
+            if (tieneReservasActivas)
+              Text(
+                'Tiene reserva activa',
+                style: TextStyle(
+                  color: Colors.orange[800],
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.blue),
+              onPressed: () async {
+                final editado = await Navigator.push<Cliente>(
+                  context,
+                  MaterialPageRoute(builder: (_) => ClienteForm(cliente: c)),
+                );
+                if (editado != null) _editarCliente(editado);
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              onPressed: () => _eliminarCliente(c),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Administración de Clientes'),
+        title: const Text('Administracion de Clientes'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
@@ -98,46 +227,11 @@ class _ClientesScreenState extends State<ClientesScreen> {
           ClientesFilter(key: filtroKey, onFilterChanged: actualizarFiltro),
           Expanded(
             child: clientesVisibles.isEmpty
-                ? const Center(child: Text('No hay clientes que coincidan'))
+                ? _buildMensajeVacio()
                 : ListView.builder(
                     itemCount: clientesVisibles.length,
-                    itemBuilder: (context, index) {
-                      final c = clientesVisibles[index];
-                      return Card(
-                        margin: const EdgeInsets.all(8),
-                        child: ListTile(
-                          title: Text(c.nombreCompleto),
-                          subtitle: Text('Documento: ${c.numeroDocumento}'),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.edit,
-                                  color: Colors.blue,
-                                ),
-                                onPressed: () async {
-                                  final editado = await Navigator.push<Cliente>(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ClienteForm(cliente: c),
-                                    ),
-                                  );
-                                  if (editado != null) editarCliente(editado);
-                                },
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete,
-                                  color: Colors.red,
-                                ),
-                                onPressed: () => eliminarCliente(c),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                    itemBuilder: (context, index) =>
+                        _buildItemCliente(clientesVisibles[index]),
                   ),
           ),
         ],
@@ -148,7 +242,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
             context,
             MaterialPageRoute(builder: (_) => const ClienteForm()),
           );
-          if (nuevo != null) agregarCliente(nuevo);
+          if (nuevo != null) _agregarCliente(nuevo);
         },
         child: const Icon(Icons.add),
       ),

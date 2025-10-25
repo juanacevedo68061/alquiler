@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '../../models/cliente.dart';
 import '../../data/data_store.dart';
 
-/// Widget que maneja los filtros por nombre o documento.
-/// Devuelve los clientes filtrados en tiempo real a través de un callback.
 class ClientesFilter extends StatefulWidget {
   final Function(List<Cliente>) onFilterChanged;
   final Key? widgetKey;
@@ -15,7 +13,7 @@ class ClientesFilter extends StatefulWidget {
   });
 
   @override
-  State<ClientesFilter> createState() => ClientesFilterState();
+  ClientesFilterState createState() => ClientesFilterState();
 }
 
 class ClientesFilterState extends State<ClientesFilter> {
@@ -25,78 +23,67 @@ class ClientesFilterState extends State<ClientesFilter> {
   List<String> nombres = [];
   List<String> documentos = [];
 
+  bool get hayFiltrosActivos =>
+      nombreSeleccionado != null || documentoSeleccionado != null;
+
   @override
   void initState() {
     super.initState();
     _cargarOpciones();
   }
 
-  /// Este método se podrá llamar desde el exterior (por ejemplo, luego de un CRUD)
+  /// Recarga opciones y limpia filtros después de operaciones CRUD
   void recargarOpciones() {
     _cargarOpciones();
-    _aplicarFiltros();
+    limpiarFiltros();
+  }
+
+  String _normalizarTexto(String texto) {
+    if (texto.isEmpty) return texto;
+    return texto[0].toUpperCase() + texto.substring(1).toLowerCase();
   }
 
   void _cargarOpciones() {
-    final clientes = DataStore.clientes;
+    final clientes = DataStore.clientes.where((c) => !c.eliminado).toList();
     final nombresSet = <String>{};
     final documentosSet = <String>{};
 
     for (var c in clientes) {
-      nombresSet.add(c.nombre);
+      nombresSet.add(_normalizarTexto(c.nombre));
       documentosSet.add(c.numeroDocumento);
     }
 
     setState(() {
       nombres = nombresSet.toList()..sort();
       documentos = documentosSet.toList()..sort();
-
-      // Verificar y limpiar filtros si los valores seleccionados ya no existen
-      _limpiarFiltrosInvalidos();
     });
   }
 
-  void _limpiarFiltrosInvalidos() {
-    bool necesitaActualizar = false;
-
-    // Verificar filtro de nombre
-    if (nombreSeleccionado != null && !nombres.contains(nombreSeleccionado)) {
-      nombreSeleccionado = null;
-      necesitaActualizar = true;
-    }
-
-    // Verificar filtro de documento
-    if (documentoSeleccionado != null &&
-        !documentos.contains(documentoSeleccionado)) {
-      documentoSeleccionado = null;
-      necesitaActualizar = true;
-    }
-
-    // Si se limpiaron filtros, aplicar cambios
-    if (necesitaActualizar) {
-      _aplicarFiltros();
-    }
-  }
-
   void _aplicarFiltros() {
-    List<Cliente> filtrados = DataStore.clientes.where((c) {
+    final filtrados = DataStore.clientes.where((c) {
+      if (c.eliminado) return false;
+
       final coincideNombre =
-          nombreSeleccionado == null || c.nombre == nombreSeleccionado;
+          nombreSeleccionado == null ||
+          _normalizarTexto(c.nombre).toLowerCase() ==
+              nombreSeleccionado!.toLowerCase();
+
       final coincideDocumento =
           documentoSeleccionado == null ||
           c.numeroDocumento == documentoSeleccionado;
+
       return coincideNombre && coincideDocumento;
     }).toList();
 
     widget.onFilterChanged(filtrados);
   }
 
-  void _limpiarFiltros() {
+  void limpiarFiltros() {
     setState(() {
       nombreSeleccionado = null;
       documentoSeleccionado = null;
     });
-    widget.onFilterChanged(DataStore.clientes);
+    _aplicarFiltros();
   }
 
   @override
@@ -110,52 +97,62 @@ class ClientesFilterState extends State<ClientesFilter> {
           padding: const EdgeInsets.all(8.0),
           child: Column(
             children: [
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'Nombre',
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('Todos')),
-                  ...nombres.map(
-                    (n) => DropdownMenuItem(value: n, child: Text(n)),
-                  ),
-                ],
-                onChanged: (valor) {
-                  setState(() => nombreSeleccionado = valor);
-                  _aplicarFiltros();
-                },
-              ),
+              _buildDropdownNombre(),
               const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'Documento',
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('Todos')),
-                  ...documentos.map(
-                    (d) => DropdownMenuItem(value: d, child: Text(d)),
-                  ),
-                ],
-                onChanged: (valor) {
-                  setState(() => documentoSeleccionado = valor);
-                  _aplicarFiltros();
-                },
-              ),
+              _buildDropdownDocumento(),
               const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: _limpiarFiltros,
-                  icon: const Icon(Icons.clear),
-                  label: const Text('Limpiar filtros'),
-                ),
-              ),
+              _buildBotonLimpiar(),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildDropdownNombre() {
+    return DropdownButtonFormField<String>(
+      decoration: const InputDecoration(
+        labelText: 'Nombre',
+        border: OutlineInputBorder(),
+      ),
+      initialValue: nombreSeleccionado, // CAMBIADO: value → initialValue
+      items: [
+        const DropdownMenuItem(value: null, child: Text('Todos')),
+        ...nombres.map((n) => DropdownMenuItem(value: n, child: Text(n))),
+      ],
+      onChanged: (valor) {
+        setState(() => nombreSeleccionado = valor);
+        _aplicarFiltros();
+      },
+    );
+  }
+
+  Widget _buildDropdownDocumento() {
+    return DropdownButtonFormField<String>(
+      decoration: const InputDecoration(
+        labelText: 'Documento',
+        border: OutlineInputBorder(),
+      ),
+      initialValue: documentoSeleccionado, // CAMBIADO: value → initialValue
+      items: [
+        const DropdownMenuItem(value: null, child: Text('Todos')),
+        ...documentos.map((d) => DropdownMenuItem(value: d, child: Text(d))),
+      ],
+      onChanged: (valor) {
+        setState(() => documentoSeleccionado = valor);
+        _aplicarFiltros();
+      },
+    );
+  }
+
+  Widget _buildBotonLimpiar() {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: TextButton.icon(
+        onPressed: limpiarFiltros,
+        icon: const Icon(Icons.clear),
+        label: const Text('Limpiar filtros'),
+      ),
     );
   }
 }

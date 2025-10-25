@@ -7,23 +7,31 @@ import 'widgets/cliente_top_card.dart';
 class EstadisticasScreen extends StatelessWidget {
   const EstadisticasScreen({super.key});
 
-  // Método para calcular estadísticas
+  // Método para calcular estadísticas en tiempo real (solo datos vigentes)
   Map<String, dynamic> _calcularEstadisticas() {
-    // Total de reservas activas (no entregadas)
-    final reservasActivas = DataStore.reservas
-        .where((r) => !r.entregado)
-        .length;
+    // Total de reservas activas
+    final reservasActivas = DataStore.reservas.where((r) => r.activo).length;
 
-    // Cantidad de vehículos disponibles
+    // Cantidad de vehículos disponibles (solo no eliminados)
     final vehiculosDisponibles = DataStore.vehiculos
-        .where((v) => v.disponible)
+        .where((v) => v.disponible && !v.eliminado)
         .length;
 
-    // Cliente con más reservas realizadas
+    // Cliente con más reservas realizadas (solo clientes no eliminados)
     final Map<int, int> reservasPorCliente = {};
+
+    // Primero obtener todos los clientes no eliminados
+    final clientesVigentes = DataStore.clientes
+        .where((c) => !c.eliminado)
+        .toList();
+    final idsClientesVigentes = clientesVigentes.map((c) => c.id).toSet();
+
+    // Contar reservas solo de clientes vigentes
     for (final reserva in DataStore.reservas) {
-      reservasPorCliente[reserva.idCliente] =
-          (reservasPorCliente[reserva.idCliente] ?? 0) + 1;
+      if (idsClientesVigentes.contains(reserva.idCliente)) {
+        reservasPorCliente[reserva.idCliente] =
+            (reservasPorCliente[reserva.idCliente] ?? 0) + 1;
+      }
     }
 
     int? clienteTopId;
@@ -39,7 +47,7 @@ class EstadisticasScreen extends StatelessWidget {
     Cliente? clienteTop;
     if (clienteTopId != null) {
       clienteTop = DataStore.clientes.firstWhere(
-        (c) => c.id == clienteTopId,
+        (c) => c.id == clienteTopId && !c.eliminado,
         orElse: () => Cliente(
           id: -1,
           nombre: 'No encontrado',
@@ -95,14 +103,16 @@ class EstadisticasScreen extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Tarjeta del Cliente Top
-            if (estadisticas['clienteTop'] != null)
+            if (estadisticas['clienteTop'] != null &&
+                estadisticas['clienteTop']!.id != -1)
               ClienteTopCard(
                 cliente: estadisticas['clienteTop'] as Cliente,
                 cantidadReservas: estadisticas['cantidadReservasTop'] as int,
               ),
 
             // Mensaje cuando no hay cliente top
-            if (estadisticas['clienteTop'] == null)
+            if (estadisticas['clienteTop'] == null ||
+                estadisticas['clienteTop']!.id == -1)
               const Padding(
                 padding: EdgeInsets.only(top: 20),
                 child: Text(

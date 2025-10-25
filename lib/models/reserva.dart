@@ -4,7 +4,7 @@ class Reserva {
   int idVehiculo;
   DateTime fechaInicio;
   DateTime fechaFin;
-  bool entregado;
+  bool activo;
 
   Reserva({
     required this.id,
@@ -12,7 +12,7 @@ class Reserva {
     required this.idVehiculo,
     required this.fechaInicio,
     required this.fechaFin,
-    this.entregado = false,
+    this.activo = true,
   });
 
   // Método para mostrar información básica en listas

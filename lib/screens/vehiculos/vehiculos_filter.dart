@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '../../models/vehiculo.dart';
 import '../../data/data_store.dart';
 
-/// Widget que maneja los filtros por marca y modelo.
-/// Devuelve los vehículos filtrados en tiempo real a través de un callback.
 class VehiculosFilter extends StatefulWidget {
   final Function(List<Vehiculo>) onFilterChanged;
   final Key? widgetKey;
@@ -15,7 +13,7 @@ class VehiculosFilter extends StatefulWidget {
   });
 
   @override
-  State<VehiculosFilter> createState() => VehiculosFilterState();
+  VehiculosFilterState createState() => VehiculosFilterState();
 }
 
 class VehiculosFilterState extends State<VehiculosFilter> {
@@ -25,76 +23,68 @@ class VehiculosFilterState extends State<VehiculosFilter> {
   List<String> marcas = [];
   List<String> modelos = [];
 
+  bool get hayFiltrosActivos =>
+      marcaSeleccionada != null || modeloSeleccionado != null;
+
   @override
   void initState() {
     super.initState();
     _cargarOpciones();
   }
 
-  /// Este método se podrá llamar desde el exterior (por ejemplo, luego de un CRUD)
+  /// Recarga opciones y limpia filtros después de operaciones CRUD
   void recargarOpciones() {
     _cargarOpciones();
-    _aplicarFiltros();
+    limpiarFiltros();
+  }
+
+  String _normalizarTexto(String texto) {
+    if (texto.isEmpty) return texto;
+    return texto[0].toUpperCase() + texto.substring(1).toLowerCase();
   }
 
   void _cargarOpciones() {
-    final vehiculos = DataStore.vehiculos;
+    final vehiculos = DataStore.vehiculos.where((v) => !v.eliminado).toList();
     final marcasSet = <String>{};
     final modelosSet = <String>{};
 
     for (var v in vehiculos) {
-      marcasSet.add(v.marca);
-      modelosSet.add(v.modelo);
+      marcasSet.add(_normalizarTexto(v.marca));
+      modelosSet.add(_normalizarTexto(v.modelo));
     }
 
     setState(() {
       marcas = marcasSet.toList()..sort();
       modelos = modelosSet.toList()..sort();
-
-      // Verificar y limpiar filtros si los valores seleccionados ya no existen
-      _limpiarFiltrosInvalidos();
     });
   }
 
-  void _limpiarFiltrosInvalidos() {
-    bool necesitaActualizar = false;
-
-    // Verificar filtro de marca
-    if (marcaSeleccionada != null && !marcas.contains(marcaSeleccionada)) {
-      marcaSeleccionada = null;
-      necesitaActualizar = true;
-    }
-
-    // Verificar filtro de modelo
-    if (modeloSeleccionado != null && !modelos.contains(modeloSeleccionado)) {
-      modeloSeleccionado = null;
-      necesitaActualizar = true;
-    }
-
-    // Si se limpiaron filtros, aplicar cambios
-    if (necesitaActualizar) {
-      _aplicarFiltros();
-    }
-  }
-
   void _aplicarFiltros() {
-    List<Vehiculo> filtrados = DataStore.vehiculos.where((v) {
+    final filtrados = DataStore.vehiculos.where((v) {
+      if (v.eliminado) return false;
+
       final coincideMarca =
-          marcaSeleccionada == null || v.marca == marcaSeleccionada;
+          marcaSeleccionada == null ||
+          _normalizarTexto(v.marca).toLowerCase() ==
+              marcaSeleccionada!.toLowerCase();
+
       final coincideModelo =
-          modeloSeleccionado == null || v.modelo == modeloSeleccionado;
+          modeloSeleccionado == null ||
+          _normalizarTexto(v.modelo).toLowerCase() ==
+              modeloSeleccionado!.toLowerCase();
+
       return coincideMarca && coincideModelo;
     }).toList();
 
     widget.onFilterChanged(filtrados);
   }
 
-  void _limpiarFiltros() {
+  void limpiarFiltros() {
     setState(() {
       marcaSeleccionada = null;
       modeloSeleccionado = null;
     });
-    widget.onFilterChanged(DataStore.vehiculos);
+    _aplicarFiltros();
   }
 
   @override
@@ -108,54 +98,62 @@ class VehiculosFilterState extends State<VehiculosFilter> {
           padding: const EdgeInsets.all(8.0),
           child: Column(
             children: [
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'Marca',
-                  border: OutlineInputBorder(),
-                ),
-                initialValue: marcaSeleccionada,
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('Todas')),
-                  ...marcas.map(
-                    (m) => DropdownMenuItem(value: m, child: Text(m)),
-                  ),
-                ],
-                onChanged: (valor) {
-                  setState(() => marcaSeleccionada = valor);
-                  _aplicarFiltros();
-                },
-              ),
+              _buildDropdownMarca(),
               const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'Modelo',
-                  border: OutlineInputBorder(),
-                ),
-                initialValue: modeloSeleccionado,
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('Todos')),
-                  ...modelos.map(
-                    (m) => DropdownMenuItem(value: m, child: Text(m)),
-                  ),
-                ],
-                onChanged: (valor) {
-                  setState(() => modeloSeleccionado = valor);
-                  _aplicarFiltros();
-                },
-              ),
+              _buildDropdownModelo(),
               const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: _limpiarFiltros,
-                  icon: const Icon(Icons.clear),
-                  label: const Text('Limpiar filtros'),
-                ),
-              ),
+              _buildBotonLimpiar(),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildDropdownMarca() {
+    return DropdownButtonFormField<String>(
+      decoration: const InputDecoration(
+        labelText: 'Marca',
+        border: OutlineInputBorder(),
+      ),
+      initialValue: marcaSeleccionada, // CAMBIADO: value → initialValue
+      items: [
+        const DropdownMenuItem(value: null, child: Text('Todas')),
+        ...marcas.map((m) => DropdownMenuItem(value: m, child: Text(m))),
+      ],
+      onChanged: (valor) {
+        setState(() => marcaSeleccionada = valor);
+        _aplicarFiltros();
+      },
+    );
+  }
+
+  Widget _buildDropdownModelo() {
+    return DropdownButtonFormField<String>(
+      decoration: const InputDecoration(
+        labelText: 'Modelo',
+        border: OutlineInputBorder(),
+      ),
+      initialValue: modeloSeleccionado, // CAMBIADO: value → initialValue
+      items: [
+        const DropdownMenuItem(value: null, child: Text('Todos')),
+        ...modelos.map((m) => DropdownMenuItem(value: m, child: Text(m))),
+      ],
+      onChanged: (valor) {
+        setState(() => modeloSeleccionado = valor);
+        _aplicarFiltros();
+      },
+    );
+  }
+
+  Widget _buildBotonLimpiar() {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: TextButton.icon(
+        onPressed: limpiarFiltros,
+        icon: const Icon(Icons.clear),
+        label: const Text('Limpiar filtros'),
+      ),
     );
   }
 }

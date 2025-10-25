@@ -78,7 +78,7 @@ class DataStore {
       idVehiculo: 1, // Toyota Corolla
       fechaInicio: DateTime(2025, 10, 27),
       fechaFin: DateTime(2025, 10, 30),
-      entregado: true,
+      activo: false,
     ),
     Reserva(
       id: 2,
@@ -86,7 +86,7 @@ class DataStore {
       idVehiculo: 4, // Honda Civic
       fechaInicio: DateTime(2025, 11, 2),
       fechaFin: DateTime(2025, 11, 6),
-      entregado: false,
+      activo: true,
     ),
   ];
 

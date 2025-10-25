@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/cliente.dart';
+import '../../data/data_store.dart';
 
 class ClienteForm extends StatefulWidget {
   final Cliente? cliente;
@@ -39,6 +40,85 @@ class _ClienteFormState extends State<ClienteForm> {
     super.dispose();
   }
 
+  // Método para validar formato y unicidad del documento
+  String? _validarDocumento(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Ingrese el número de documento';
+    }
+
+    final documento = value.trim();
+
+    // Validar longitud (4-15 dígitos - cubre la mayoría de países)
+    if (documento.length < 4) {
+      return 'El documento debe tener al menos 4 dígitos';
+    }
+    if (documento.length > 15) {
+      return 'El documento no puede tener más de 15 dígitos';
+    }
+
+    // Validar que solo contenga números
+    if (!RegExp(r'^[0-9]+$').hasMatch(documento)) {
+      return 'El documento solo puede contener números';
+    }
+
+    // Validar que no sea solo ceros
+    if (documento == '0' * documento.length) {
+      return 'El documento no puede ser solo ceros';
+    }
+
+    // Validar unicidad (solo contra clientes activos)
+    final clienteExistente = DataStore.clientes.firstWhere(
+      (c) =>
+          !c.eliminado &&
+          c.numeroDocumento == documento &&
+          c.id != widget.cliente?.id,
+      orElse: () =>
+          Cliente(id: -1, nombre: '', apellido: '', numeroDocumento: ''),
+    );
+
+    if (clienteExistente.id != -1) {
+      return 'Ya existe un cliente activo con este número de documento';
+    }
+
+    return null;
+  }
+
+  // Validar que el nombre solo contenga letras (sin espacios)
+  String? _validarNombre(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Ingrese el nombre';
+    }
+
+    // Solo letras, sin espacios
+    if (!RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ]+$').hasMatch(value)) {
+      return 'El nombre solo puede contener letras (sin espacios)';
+    }
+
+    if (value.length < 2) {
+      return 'El nombre debe tener al menos 2 caracteres';
+    }
+
+    return null;
+  }
+
+  // Validar que el apellido solo contenga letras (sin espacios)
+  String? _validarApellido(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Ingrese el apellido';
+    }
+
+    // Solo letras, sin espacios
+    if (!RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ]+$').hasMatch(value)) {
+      return 'El apellido solo puede contener letras (sin espacios)';
+    }
+
+    if (value.length < 2) {
+      return 'El apellido debe tener al menos 2 caracteres';
+    }
+
+    return null;
+  }
+
   void guardarCliente() {
     if (_formKey.currentState!.validate()) {
       final cliente = Cliente(
@@ -68,30 +148,30 @@ class _ClienteFormState extends State<ClienteForm> {
             children: [
               TextFormField(
                 controller: nombreController,
-                decoration: const InputDecoration(labelText: 'Nombre'),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Ingrese el nombre' : null,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre',
+                  hintText: 'Solo letras, sin espacios',
+                ),
+                validator: _validarNombre,
               ),
               const SizedBox(height: 10),
               TextFormField(
                 controller: apellidoController,
-                decoration: const InputDecoration(labelText: 'Apellido'),
-                validator: (value) => value == null || value.isEmpty
-                    ? 'Ingrese el apellido'
-                    : null,
+                decoration: const InputDecoration(
+                  labelText: 'Apellido',
+                  hintText: 'Solo letras, sin espacios',
+                ),
+                validator: _validarApellido,
               ),
               const SizedBox(height: 10),
               TextFormField(
                 controller: documentoController,
                 decoration: const InputDecoration(
                   labelText: 'Número de Documento',
+                  hintText: 'Solo números (4-15 dígitos)',
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Ingrese el número de documento';
-                  }
-                  return null;
-                },
+                keyboardType: TextInputType.number,
+                validator: _validarDocumento,
               ),
               const SizedBox(height: 20),
               ElevatedButton.icon(

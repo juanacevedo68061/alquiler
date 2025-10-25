@@ -23,7 +23,7 @@ class _EntregaFormState extends State<EntregaForm> {
     return DataStore.reservas
         .where(
           (r) =>
-              !r.entregado &&
+              r.activo &&
               r.fechaInicio.isBefore(
                 DateTime.now().add(const Duration(days: 1)),
               ),
@@ -60,7 +60,7 @@ class _EntregaFormState extends State<EntregaForm> {
         (r) => r.id == reservaSeleccionada!.id,
       );
       if (indexReserva != -1) {
-        DataStore.reservas[indexReserva].entregado = true;
+        DataStore.reservas[indexReserva].activo = false;
       }
 
       final indexVehiculo = DataStore.vehiculos.indexWhere(
@@ -233,7 +233,7 @@ class _EntregaFormState extends State<EntregaForm> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 40),
                       child: Text(
-                        'No existen reservas pendientes de entrega que hayan iniciado su período de alquiler.',
+                        'No existen reservas activas pendientes de entrega que hayan iniciado su período de alquiler.',
                         textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                       ),
