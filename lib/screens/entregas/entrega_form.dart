@@ -224,7 +224,7 @@ class _EntregaFormState extends State<EntregaForm> {
                     Text(
                       'No hay reservas disponibles',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.grey[600],
                       ),

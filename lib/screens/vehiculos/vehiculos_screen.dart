@@ -157,7 +157,7 @@ class _VehiculosScreenState extends State<VehiculosScreen> {
           Text(
             mensaje,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: Colors.grey[600],
             ),

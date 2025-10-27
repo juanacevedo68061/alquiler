@@ -133,7 +133,7 @@ class _ReservasScreenState extends State<ReservasScreen> {
                   Text(
                     'No hay reservas registradas',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.grey[600],
                     ),

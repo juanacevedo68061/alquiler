@@ -158,7 +158,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
           Text(
             mensaje,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: Colors.grey[600],
             ),
