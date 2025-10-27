@@ -70,7 +70,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
           ),
           content: Text(
             tieneReservasActivas
-                ? 'El cliente ${cliente.nombreCompleto} tiene una reserva activa. ¿Esta seguro de que desea eliminarlo? La reserva activa sera cancelada automaticamente.'
+                ? 'El cliente ${cliente.nombreCompleto} tiene reservas activas. ¿Esta seguro de que desea eliminarlo? La reservas activas seran canceladas automaticamente.'
                 : '¿Esta seguro de que desea eliminar a ${cliente.nombreCompleto}?',
           ),
           actions: [
@@ -120,7 +120,16 @@ class _ClientesScreenState extends State<ClientesScreen> {
   void _cancelarReservasActivas(int idCliente) {
     for (final reserva in DataStore.reservas) {
       if (reserva.idCliente == idCliente && reserva.activo) {
+        // Cancelar la reserva
         reserva.activo = false;
+
+        // Volver a poner el vehículo como disponible
+        final vehiculoIndex = DataStore.vehiculos.indexWhere(
+          (v) => v.id == reserva.idVehiculo,
+        );
+        if (vehiculoIndex != -1) {
+          DataStore.vehiculos[vehiculoIndex].disponible = true;
+        }
       }
     }
   }
